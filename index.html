@@ -13,7 +13,6 @@
       --border-strong: #525252;
       --text: #ffffff;
       --muted: #8a8a8a;
-      --accent: #ffffff;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -25,7 +24,7 @@
       -webkit-font-smoothing: antialiased;
     }
     .mono { font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-    .container { max-width: 960px; margin: 0 auto; padding: 24px 16px 80px; }
+    .container { max-width: 980px; margin: 0 auto; padding: 24px 16px 80px; }
 
     /* Header */
     header {
@@ -129,7 +128,7 @@
       margin-bottom: 12px;
       flex-wrap: wrap;
     }
-    .plan-title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .plan-title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .badge {
       font-size: 10px;
       padding: 2px 6px;
@@ -138,6 +137,16 @@
       letter-spacing: 0.05em;
     }
     .badge.on { border-color: #fff; color: #000; background: #fff; font-weight: 700; }
+    .leg-summary-list {
+      margin: 8px 0 12px;
+      padding: 10px 12px;
+      background: #050505;
+      border: 1px solid #1c1c1c;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 12px;
+    }
     .plan-meta {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -156,7 +165,7 @@
     /* Forms */
     .form-card { background: var(--surface); border: 1px solid var(--border); padding: 20px; }
     .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 16px; }
-    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field { display: flex; flex-direction: column; gap: 6px; position: relative; }
     .field label { font-size: 11px; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; }
     input[type="text"], input[type="number"], input[type="date"], input[type="email"], input[type="password"], select {
       background: #000000;
@@ -166,9 +175,74 @@
       font-size: 13px;
       font-family: inherit;
       outline: none;
+      width: 100%;
     }
     input:focus, select:focus { border-color: #ffffff; }
     input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+
+    /* Airport Autocomplete */
+    .airport-wrap { position: relative; width: 100%; }
+    .airport-hint { font-size: 11px; color: #9a9a9a; margin-top: 3px; min-height: 15px; }
+    .airport-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #0c0c0c;
+      border: 1px solid #ffffff;
+      border-top: none;
+      max-height: 220px;
+      overflow-y: auto;
+      z-index: 90;
+      display: none;
+    }
+    .airport-dropdown.open { display: block; }
+    .airport-option {
+      padding: 8px 10px;
+      cursor: pointer;
+      border-bottom: 1px solid #1d1d1d;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+    .airport-option:last-child { border-bottom: none; }
+    .airport-option:hover, .airport-option.active { background: #ffffff; color: #000000; }
+    .airport-option:hover .ap-sub, .airport-option.active .ap-sub { color: #333333; }
+    .ap-code { font-weight: 700; font-size: 13px; }
+    .ap-sub { color: #888888; font-size: 11px; }
+
+    /* Multi-city leg row */
+    .leg-card {
+      background: #050505;
+      border: 1px solid #242424;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .leg-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .leg-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1.2fr 1fr 1.1fr;
+      gap: 10px;
+      align-items: start;
+    }
+    @media (max-width: 720px) {
+      .leg-grid { grid-template-columns: 1fr; }
+    }
+    .time-range-box {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .time-range-box select { padding: 9px 6px; font-size: 12px; }
 
     .kv-section { border-top: 1px solid var(--border); padding-top: 16px; margin-top: 16px; }
     .kv-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-bottom: 8px; }
@@ -191,7 +265,7 @@
     }
     .modal-backdrop.open { display: flex; }
     .modal {
-      background: #0a0a0a; border: 1px solid #555; width: 100%; max-width: 640px;
+      background: #0a0a0a; border: 1px solid #555; width: 100%; max-width: 760px;
       max-height: 90vh; overflow-y: auto; padding: 22px;
     }
 
@@ -199,7 +273,7 @@
     #toast {
       position: fixed; bottom: 20px; right: 20px; background: #ffffff; color: #000000;
       padding: 12px 18px; font-size: 12px; font-weight: 700; border: 1px solid #000;
-      display: none; z-index: 100; max-width: 340px;
+      display: none; z-index: 100; max-width: 360px;
     }
   </style>
 </head>
@@ -231,7 +305,7 @@
       </div>
     </header>
 
-    <!-- 상단 상태 바: API 사용량 + 전체 자동 새로고침 + 전체 즉시 실행 -->
+    <!-- 상단 상태 바 -->
     <div class="telemetry-grid">
       <div class="stat-box">
         <div class="stat-label">SERPAPI MONTHLY USAGE (<span id="usage-month">-</span>)</div>
@@ -254,7 +328,7 @@
       <div class="stat-box">
         <div class="stat-label">MANUAL DISPATCH</div>
         <button class="btn btn-primary" style="width:100%; padding:11px;" onclick="triggerWorkflow('')">▶ 활성 노선 전체 지금 즉시 알림</button>
-        <div style="font-size:11px; color:var(--muted);">실행 후 약 20~30초 뒤 디스코드로 전송됩니다.</div>
+        <div style="font-size:11px; color:var(--muted);">실행 후 약 20~30초 뒤 디스코드 전용 채널로 전송됩니다.</div>
       </div>
     </div>
 
@@ -275,7 +349,7 @@
         <div class="form-grid">
           <div class="field">
             <label>여행 계획 이름 *</label>
-            <input type="text" id="new-title" placeholder="예: 2027 도쿄 왕복" />
+            <input type="text" id="new-title" placeholder="예: 27' 튀르키예 전역 여행" />
           </div>
           <div class="field">
             <label>여정 유형 *</label>
@@ -303,26 +377,46 @@
         <!-- 왕복 / 편도 입력 -->
         <div id="new-standard-dates" class="form-grid">
           <div class="field">
-            <label>출발 공항 (IATA) *</label>
-            <input type="text" id="new-origin" placeholder="ICN" style="text-transform:uppercase;" />
+            <label>출발 공항 (도시명·공항명·코드 검색) *</label>
+            <div class="airport-wrap">
+              <input type="text" id="new-origin" class="airport-input" placeholder="예: 인천 또는 ICN" autocomplete="off" />
+              <div class="airport-dropdown"></div>
+            </div>
+            <div class="airport-hint" id="new-origin-hint"></div>
           </div>
           <div class="field">
-            <label>도착 공항 (IATA) *</label>
-            <input type="text" id="new-dest" placeholder="NRT" style="text-transform:uppercase;" />
+            <label>도착 공항 (도시명·공항명·코드 검색) *</label>
+            <div class="airport-wrap">
+              <input type="text" id="new-dest" class="airport-input" placeholder="예: 도쿄, 나리타 또는 NRT" autocomplete="off" />
+              <div class="airport-dropdown"></div>
+            </div>
+            <div class="airport-hint" id="new-dest-hint"></div>
           </div>
           <div class="field">
             <label>가는 날 *</label>
             <input type="date" id="new-depart" />
+            <div class="time-range-box" style="margin-top:4px;">
+              <select id="new-dep-hr-start"></select>
+              <span style="color:#666;">~</span>
+              <select id="new-dep-hr-end"></select>
+            </div>
           </div>
           <div class="field" id="new-return-wrap">
             <label>오는 날 (왕복 필수)</label>
             <input type="date" id="new-return" />
+            <div class="time-range-box" style="margin-top:4px;">
+              <select id="new-ret-hr-start"></select>
+              <span style="color:#666;">~</span>
+              <select id="new-ret-hr-end"></select>
+            </div>
           </div>
         </div>
 
         <!-- 다구간(MULTI) 입력 -->
         <div id="new-multi-wrap" style="display:none; margin-bottom:16px;">
-          <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:8px;">다구간 여정 (MULTI_CITY_LEGS)</label>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <label style="font-size:11px; color:var(--muted);">다구간 여정 (각 구간별 공항 및 이륙 희망 시간대 설정 · 예: 08시 ~ 09시 = 08:00~09:59 출발)</label>
+          </div>
           <div id="new-multi-legs"></div>
           <button type="button" class="btn" onclick="addMultiLegRow('new-multi-legs')">+ 구간 추가</button>
         </div>
@@ -330,7 +424,7 @@
         <div class="form-grid">
           <div class="field">
             <label>목표 알림 가격 (원, 선택)</label>
-            <input type="number" id="new-target-price" placeholder="예: 350000" />
+            <input type="number" id="new-target-price" placeholder="예: 2000000" />
           </div>
           <div class="field">
             <label>역대 하위 백분위 알림 기준 (%)</label>
@@ -341,17 +435,15 @@
         <!-- 동적 커스텀 변수 (extra_params) -->
         <div class="kv-section">
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <label style="font-size:12px; font-weight:700;">커스텀 SerpApi 변수 (extra_params)</label>
+            <label style="font-size:12px; font-weight:700;">추가 SerpApi 변수 (extra_params)</label>
             <button type="button" class="btn" onclick="addKvRow('new-kv-list')">+ 변수 추가</button>
           </div>
           <div class="preset-chips">
-            <span class="chip" onclick="addKvRow('new-kv-list', 'outbound_times', '8,20')">+ outbound_times (출발시간)</span>
-            <span class="chip" onclick="addKvRow('new-kv-list', 'return_times', '12,22')">+ return_times (귀국시간)</span>
             <span class="chip" onclick="addKvRow('new-kv-list', 'include_airlines', 'KE,OZ')">+ include_airlines (항공사 포함)</span>
             <span class="chip" onclick="addKvRow('new-kv-list', 'exclude_airlines', '')">+ exclude_airlines (항공사 제외)</span>
             <span class="chip" onclick="addKvRow('new-kv-list', 'bags', '1')">+ bags (기내수하물)</span>
-            <span class="chip" onclick="addKvRow('new-kv-list', 'max_duration', '600')">+ max_duration (최대비행분)</span>
-            <span class="chip" onclick="addKvRow('new-kv-list', 'travel_class', '1')">+ travel_class (좌석등급)</span>
+            <span class="chip" onclick="addKvRow('new-kv-list', 'max_duration', '900')">+ max_duration (최대비행분)</span>
+            <span class="chip" onclick="addKvRow('new-kv-list', 'travel_class', '1')">+ travel_class (좌석등급 1~4)</span>
           </div>
           <div id="new-kv-list"></div>
         </div>
@@ -367,30 +459,16 @@
   <div id="edit-modal" class="modal-backdrop">
     <div class="modal">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-        <h3 style="font-size:15px;">여행 계획 수정</h3>
+        <h3 style="font-size:15px;">여행 계획 및 변수 수정</h3>
         <button class="btn" onclick="closeEditModal()">닫기</button>
       </div>
       <input type="hidden" id="edit-id" />
+      <input type="hidden" id="edit-trip-type" />
+
       <div class="form-grid">
         <div class="field">
           <label>여행 계획 이름</label>
           <input type="text" id="edit-title" />
-        </div>
-        <div class="field">
-          <label>출발 공항</label>
-          <input type="text" id="edit-origin" style="text-transform:uppercase;" />
-        </div>
-        <div class="field">
-          <label>도착 공항</label>
-          <input type="text" id="edit-dest" style="text-transform:uppercase;" />
-        </div>
-        <div class="field">
-          <label>가는 날</label>
-          <input type="date" id="edit-depart" />
-        </div>
-        <div class="field">
-          <label>오는 날</label>
-          <input type="date" id="edit-return" />
         </div>
         <div class="field">
           <label>성인 인원</label>
@@ -415,9 +493,54 @@
         </div>
       </div>
 
+      <!-- 수정 모달: 왕복/편도용 -->
+      <div id="edit-standard-dates" class="form-grid">
+        <div class="field">
+          <label>출발 공항</label>
+          <div class="airport-wrap">
+            <input type="text" id="edit-origin" class="airport-input" autocomplete="off" />
+            <div class="airport-dropdown"></div>
+          </div>
+          <div class="airport-hint" id="edit-origin-hint"></div>
+        </div>
+        <div class="field">
+          <label>도착 공항</label>
+          <div class="airport-wrap">
+            <input type="text" id="edit-dest" class="airport-input" autocomplete="off" />
+            <div class="airport-dropdown"></div>
+          </div>
+          <div class="airport-hint" id="edit-dest-hint"></div>
+        </div>
+        <div class="field">
+          <label>가는 날</label>
+          <input type="date" id="edit-depart" />
+          <div class="time-range-box" style="margin-top:4px;">
+            <select id="edit-dep-hr-start"></select>
+            <span style="color:#666;">~</span>
+            <select id="edit-dep-hr-end"></select>
+          </div>
+        </div>
+        <div class="field" id="edit-return-wrap">
+          <label>오는 날</label>
+          <input type="date" id="edit-return" />
+          <div class="time-range-box" style="margin-top:4px;">
+            <select id="edit-ret-hr-start"></select>
+            <span style="color:#666;">~</span>
+            <select id="edit-ret-hr-end"></select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 수정 모달: 다구간용 -->
+      <div id="edit-multi-wrap" style="display:none; margin-bottom:16px;">
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:8px;">다구간 여정 및 구간별 이륙 시간대 수정</label>
+        <div id="edit-multi-legs"></div>
+        <button type="button" class="btn" onclick="addMultiLegRow('edit-multi-legs')">+ 구간 추가</button>
+      </div>
+
       <div class="kv-section">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-          <label style="font-size:12px; font-weight:700;">커스텀 변수 (extra_params)</label>
+          <label style="font-size:12px; font-weight:700;">추가 SerpApi 변수 (extra_params)</label>
           <button type="button" class="btn" onclick="addKvRow('edit-kv-list')">+ 변수 추가</button>
         </div>
         <div id="edit-kv-list"></div>
@@ -434,14 +557,253 @@
 
   <script>
     // =========================================================
-    // 1. SUPABASE 설정 (본인의 Publishable Key를 아래에 붙여넣으세요)
+    // 1. SUPABASE 설정
     // =========================================================
     const SUPABASE_URL = "https://riapxjwtalqvaevsnpnb.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_A3BcYO4bYJZGBbKmFivEaw_vTQqYIae";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_A3BcYO4bYJZG8bKmFivEaw_vTQqY..."; // 아래 init에서 실제 키 교체 확인
 
-    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    // =========================================================
+    // 2. 전 세계 주요 공항 데이터베이스 (한글/영문/IATA 자동완성)
+    // =========================================================
+    const AIRPORTS = [
+      // 대한민국
+      { code: "ICN", name: "인천국제공항", city: "서울/인천", country: "대한민국", kw: "incheon seoul korea" },
+      { code: "GMP", name: "김포국제공항", city: "서울", country: "대한민국", kw: "gimpo seoul korea" },
+      { code: "CJU", name: "제주국제공항", city: "제주", country: "대한민국", kw: "jeju korea" },
+      { code: "PUS", name: "김해국제공항", city: "부산", country: "대한민국", kw: "gimhae busan korea" },
+      { code: "TAE", name: "대구국제공항", city: "대구", country: "대한민국", kw: "daegu korea" },
+      { code: "CJJ", name: "청주국제공항", city: "청주", country: "대한민국", kw: "cheongju korea" },
+      { code: "MWX", name: "무안국제공항", city: "무안/광주", country: "대한민국", kw: "muan gwangju korea" },
+      { code: "YNY", name: "양양국제공항", city: "양양/강원", country: "대한민국", kw: "yangyang gangwon korea" },
+      // 중국 / 홍콩 / 마카오 / 대만
+      { code: "PVG", name: "상하이 푸동 국제공항", city: "상하이", country: "중국", kw: "shanghai pudong china 상해" },
+      { code: "SHA", name: "상하이 훙차오 국제공항", city: "상하이", country: "중국", kw: "shanghai hongqiao china 상해 홍교" },
+      { code: "PEK", name: "베이징 수도 국제공항", city: "베이징", country: "중국", kw: "beijing capital china 북경" },
+      { code: "PKX", name: "베이징 다싱 국제공항", city: "베이징", country: "중국", kw: "beijing daxing china 북경" },
+      { code: "CAN", name: "광저우 바이윈 국제공항", city: "광저우", country: "중국", kw: "guangzhou baiyun china" },
+      { code: "SZX", name: "선전 바오안 국제공항", city: "선전", country: "중국", kw: "shenzhen baoan china 심천" },
+      { code: "TAO", name: "칭다오 자오둥 국제공항", city: "칭다오", country: "중국", kw: "qingdao china 청도" },
+      { code: "DLC", name: "다롄 저우수이쯔 국제공항", city: "다롄", country: "중국", kw: "dalian china 대련" },
+      { code: "HGH", name: "항저우 샤오산 국제공항", city: "항저우", country: "중국", kw: "hangzhou china 항주" },
+      { code: "TFU", name: "청두 톈푸 국제공항", city: "청두", country: "중국", kw: "chengdu tianfu china 성도" },
+      { code: "HKG", name: "홍콩 국제공항", city: "홍콩", country: "홍콩", kw: "hong kong" },
+      { code: "MFM", name: "마카오 국제공항", city: "마카오", country: "마카오", kw: "macau" },
+      { code: "TPE", name: "타이베이 타오위안 국제공항", city: "타이베이", country: "대만", kw: "taipei taoyuan taiwan 대만" },
+      { code: "TSA", name: "타이베이 쑹산 공항", city: "타이베이", country: "대만", kw: "taipei songshan taiwan" },
+      { code: "KHH", name: "가오슝 국제공항", city: "가오슝", country: "대만", kw: "kaohsiung taiwan" },
+      // 튀르키예 / 중동
+      { code: "IST", name: "이스탄불 공항", city: "이스탄불", country: "튀르키예", kw: "istanbul turkey turkiye 터키" },
+      { code: "SAW", name: "사비하 괵첸 국제공항", city: "이스탄불", country: "튀르키예", kw: "sabiha gokcen istanbul turkey turkiye 터키" },
+      { code: "ESB", name: "에센보아 국제공항", city: "앙카라", country: "튀르키예", kw: "ankara esenboga turkey turkiye 터키" },
+      { code: "ADB", name: "아드난 멘데레스 공항", city: "이즈미르", country: "튀르키예", kw: "izmir turkey turkiye 터키" },
+      { code: "AYT", name: "안탈리아 공항", city: "안탈리아", country: "튀르키예", kw: "antalya turkey turkiye 터키" },
+      { code: "ASR", name: "카이세리 에르킬레트 공항", city: "카이세리/카파도키아", country: "튀르키예", kw: "kayseri cappadocia turkey turkiye" },
+      { code: "NAV", name: "네브셰히르 카파도키아 공항", city: "네브셰히르/카파도키아", country: "튀르키예", kw: "nevsehir cappadocia turkey turkiye" },
+      { code: "DXB", name: "두바이 국제공항", city: "두바이", country: "아랍에미리트", kw: "dubai uae" },
+      { code: "AUH", name: "자이드 국제공항", city: "아부다비", country: "아랍에미리트", kw: "abu dhabi uae" },
+      { code: "DOH", name: "하마드 국제공항", city: "도하", country: "카타르", kw: "doha qatar" },
+      // 일본
+      { code: "NRT", name: "도쿄 나리타 국제공항", city: "도쿄", country: "일본", kw: "tokyo narita japan" },
+      { code: "HND", name: "도쿄 하네다 국제공항", city: "도쿄", country: "일본", kw: "tokyo haneda japan" },
+      { code: "KIX", name: "오사카 간사이 국제공항", city: "오사카", country: "일본", kw: "osaka kansai japan" },
+      { code: "ITM", name: "오사카 이타미 공항", city: "오사카", country: "일본", kw: "osaka itami japan" },
+      { code: "FUK", name: "후쿠오카 공항", city: "후쿠오카", country: "일본", kw: "fukuoka japan" },
+      { code: "CTS", name: "삿포로 신치토세 공항", city: "삿포로/홋카이도", country: "일본", kw: "sapporo chitose hokkaido japan" },
+      { code: "OKA", name: "오키나와 나하 공항", city: "오키나와", country: "일본", kw: "okinawa naha japan" },
+      { code: "NGO", name: "나고야 주부 센트레아 공항", city: "나고야", country: "일본", kw: "nagoya chubu japan" },
+      { code: "HIJ", name: "히로시마 공항", city: "히로시마", country: "일본", kw: "hiroshima japan" },
+      { code: "TAK", name: "다카마쓰 공항", city: "다카마쓰/가가와", country: "일본", kw: "takamatsu japan" },
+      { code: "MYJ", name: "마쓰야마 공항", city: "마쓰야마/에히메", country: "일본", kw: "matsuyama japan" },
+      { code: "KMJ", name: "구마모토 공항", city: "구마모토", country: "일본", kw: "kumamoto japan" },
+      { code: "KOJ", name: "가고시마 공항", city: "가고시마", country: "일본", kw: "kagoshima japan" },
+      { code: "SDJ", name: "센다이 공항", city: "센다이", country: "일본", kw: "sendai japan" },
+      // 동남아시아
+      { code: "BKK", name: "방콕 수완나품 공항", city: "방콕", country: "태국", kw: "bangkok suvarnabhumi thailand" },
+      { code: "DMK", name: "방콕 돈므앙 공항", city: "방콕", country: "태국", kw: "bangkok don mueang thailand" },
+      { code: "CNX", name: "치앙마이 국제공항", city: "치앙마이", country: "태국", kw: "chiang mai thailand" },
+      { code: "HKT", name: "푸켓 국제공항", city: "푸켓", country: "태국", kw: "phuket thailand" },
+      { code: "DAD", name: "다낭 국제공항", city: "다낭", country: "베트남", kw: "da nang danang vietnam" },
+      { code: "HAN", name: "하노이 노이바이 국제공항", city: "하노이", country: "베트남", kw: "hanoi noi bai vietnam" },
+      { code: "SGN", name: "호치민 떤선녓 국제공항", city: "호치민", country: "베트남", kw: "ho chi minh saigon vietnam" },
+      { code: "CXR", name: "나트랑 깜라인 국제공항", city: "나트랑/냐짱", country: "베트남", kw: "nha trang cam ranh vietnam" },
+      { code: "PQC", name: "푸꾸옥 국제공항", city: "푸꾸옥", country: "베트남", kw: "phu quoc vietnam" },
+      { code: "SIN", name: "싱가포르 창이 국제공항", city: "싱가포르", country: "싱가포르", kw: "singapore changi" },
+      { code: "KUL", name: "쿠알라룸푸르 국제공항", city: "쿠알라룸푸르", country: "말레이시아", kw: "kuala lumpur malaysia" },
+      { code: "BKI", name: "코타키나발루 국제공항", city: "코타키나발루", country: "말레이시아", kw: "kota kinabalu malaysia" },
+      { code: "DPS", name: "발리 응우라라이 국제공항", city: "발리/덴파사르", country: "인도네시아", kw: "bali denpasar indonesia" },
+      { code: "CGK", name: "자카르타 수카르노 하타 공항", city: "자카르타", country: "인도네시아", kw: "jakarta indonesia" },
+      { code: "MNL", name: "마닐라 니노이 아키노 공항", city: "마닐라", country: "필리핀", kw: "manila philippines" },
+      { code: "CEB", name: "막탄 세부 국제공항", city: "세부", country: "필리핀", kw: "cebu mactan philippines" },
+      // 유럽
+      { code: "LHR", name: "런던 히스로 공항", city: "런던", country: "영국", kw: "london heathrow uk" },
+      { code: "LGW", name: "런던 개트윅 공항", city: "런던", country: "영국", kw: "london gatwick uk" },
+      { code: "CDG", name: "파리 샤를 드 골 공항", city: "파리", country: "프랑스", kw: "paris charles de gaulle france" },
+      { code: "ORY", name: "파리 오를리 공항", city: "파리", country: "프랑스", kw: "paris orly france" },
+      { code: "FRA", name: "프랑크푸르트 공항", city: "프랑크푸르트", country: "독일", kw: "frankfurt germany" },
+      { code: "MUC", name: "뮌헨 국제공항", city: "뮌헨", country: "독일", kw: "munich germany" },
+      { code: "FCO", name: "로마 피우미치노 공항", city: "로마", country: "이탈리아", kw: "rome fiumicino italy" },
+      { code: "MXP", name: "밀라노 말펜사 공항", city: "밀라노", country: "이탈리아", kw: "milan malpensa italy" },
+      { code: "BCN", name: "바르셀로나 엘프라트 공항", city: "바르셀로나", country: "스페인", kw: "barcelona spain" },
+      { code: "MAD", name: "마드리드 바라하스 공항", city: "마드리드", country: "스페인", kw: "madrid spain" },
+      { code: "AMS", name: "암스테르담 스키폴 공항", city: "암스테르담", country: "네덜란드", kw: "amsterdam schiphol netherlands" },
+      { code: "ZRH", name: "취리히 공항", city: "취리히", country: "스위스", kw: "zurich switzerland" },
+      { code: "VIE", name: "비엔나 국제공항", city: "비엔나/빈", country: "오스트리아", kw: "vienna austria" },
+      { code: "PRG", name: "프라하 바츨라프 하벨 공항", city: "프라하", country: "체코", kw: "prague czech" },
+      { code: "BUD", name: "부다페스트 리스트 페렌츠 공항", city: "부다페스트", country: "헝가리", kw: "budapest hungary" },
+      { code: "ATH", name: "아테네 엘레프테리오스 베니젤로스 공항", city: "아테네", country: "그리스", kw: "athens greece" },
+      // 미주 / 대양주
+      { code: "JFK", name: "뉴욕 존 F. 케네디 국제공항", city: "뉴욕", country: "미국", kw: "new york jfk usa" },
+      { code: "EWR", name: "뉴어크 리버티 국제공항", city: "뉴욕/뉴어크", country: "미국", kw: "newark new york usa" },
+      { code: "LAX", name: "로스앤젤레스 국제공항", city: "로스앤젤레스/LA", country: "미국", kw: "los angeles la usa" },
+      { code: "SFO", name: "샌프란시스코 국제공항", city: "샌프란시스코", country: "미국", kw: "san francisco usa" },
+      { code: "SEA", name: "시애틀 터코마 국제공항", city: "시애틀", country: "미국", kw: "seattle tacoma usa" },
+      { code: "ORD", name: "시카고 오헤어 국제공항", city: "시카고", country: "미국", kw: "chicago ohare usa" },
+      { code: "DFW", name: "댈러스 포트워스 국제공항", city: "댈러스", country: "미국", kw: "dallas fort worth usa" },
+      { code: "ATL", name: "애틀랜타 하츠필드 잭슨 공항", city: "애틀랜타", country: "미국", kw: "atlanta usa" },
+      { code: "HNL", name: "호놀룰루 대니얼 K. 이노우에 공항", city: "하와이/호놀룰루", country: "미국", kw: "honolulu hawaii usa" },
+      { code: "YVR", name: "밴쿠버 국제공항", city: "밴쿠버", country: "캐나다", kw: "vancouver canada" },
+      { code: "YYZ", name: "토론토 피어슨 국제공항", city: "토론토", country: "캐나다", kw: "toronto pearson canada" },
+      { code: "SYD", name: "시드니 킹스포드 스미스 공항", city: "시드니", country: "호주", kw: "sydney australia" },
+      { code: "MEL", name: "멜버른 공항", city: "멜버른", country: "호주", kw: "melbourne australia" },
+      { code: "GUM", name: "괌 안토니오 B. 원 팻 국제공항", city: "괌", country: "미국령 괌", kw: "guam" },
+      { code: "SPN", name: "사이판 국제공항", city: "사이판", country: "북마리아나", kw: "saipan" }
+    ];
+
+    function findAirportByCode(code) {
+      if (!code) return null;
+      return AIRPORTS.find(a => a.code === code.toUpperCase()) || null;
+    }
+
+    function searchAirports(query) {
+      const q = query.trim().toLowerCase();
+      if (!q) return [];
+      return AIRPORTS.filter(a =>
+        a.code.toLowerCase().includes(q) ||
+        a.name.toLowerCase().includes(q) ||
+        a.city.toLowerCase().includes(q) ||
+        a.country.toLowerCase().includes(q) ||
+        a.kw.includes(q)
+      ).slice(0, 8);
+    }
+
+    function bindAirportAutocomplete(inputEl, hintEl = null) {
+      if (!inputEl || inputEl.dataset.acBound) return;
+      inputEl.dataset.acBound = "1";
+      const wrap = inputEl.closest(".airport-wrap");
+      const dropdown = wrap.querySelector(".airport-dropdown");
+      let activeIdx = -1;
+
+      function updateHint(code) {
+        const found = findAirportByCode(code);
+        if (hintEl) {
+          hintEl.textContent = found ? `${found.code} · ${found.name} (${found.city})` : "";
+        }
+      }
+
+      function renderDropdown(matches) {
+        activeIdx = -1;
+        if (!matches.length) {
+          dropdown.classList.remove("open");
+          dropdown.innerHTML = "";
+          return;
+        }
+        dropdown.innerHTML = matches.map((a, idx) => `
+          <div class="airport-option" data-idx="${idx}" data-code="${a.code}">
+            <div>
+              <span class="ap-code mono">${a.code}</span>
+              <span style="margin-left:6px;">${a.name}</span>
+            </div>
+            <span class="ap-sub">${a.city}, ${a.country}</span>
+          </div>
+        `).join("");
+        dropdown.classList.add("open");
+
+        dropdown.querySelectorAll(".airport-option").forEach(opt => {
+          opt.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            const code = opt.dataset.code;
+            inputEl.value = code;
+            updateHint(code);
+            dropdown.classList.remove("open");
+          });
+        });
+      }
+
+      inputEl.addEventListener("input", () => {
+        const val = inputEl.value;
+        updateHint(val);
+        renderDropdown(searchAirports(val));
+      });
+
+      inputEl.addEventListener("focus", () => {
+        if (inputEl.value.trim()) {
+          renderDropdown(searchAirports(inputEl.value));
+        }
+      });
+
+      inputEl.addEventListener("keydown", (e) => {
+        const opts = dropdown.querySelectorAll(".airport-option");
+        if (!dropdown.classList.contains("open") || !opts.length) return;
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          activeIdx = (activeIdx + 1) % opts.length;
+          opts.forEach((o, i) => o.classList.toggle("active", i === activeIdx));
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          activeIdx = (activeIdx - 1 + opts.length) % opts.length;
+          opts.forEach((o, i) => o.classList.toggle("active", i === activeIdx));
+        } else if (e.key === "Enter" && activeIdx >= 0) {
+          e.preventDefault();
+          const code = opts[activeIdx].dataset.code;
+          inputEl.value = code;
+          updateHint(code);
+          dropdown.classList.remove("open");
+        }
+      });
+
+      inputEl.addEventListener("blur", () => {
+        setTimeout(() => {
+          dropdown.classList.remove("open");
+          inputEl.value = inputEl.value.trim().toUpperCase();
+          updateHint(inputEl.value);
+        }, 150);
+      });
+
+      if (inputEl.value) updateHint(inputEl.value);
+    }
+
+    function buildHourOptionsHtml(selectedVal = "", placeholder = "전체 시간") {
+      let html = `<option value="">${placeholder}</option>`;
+      for (let h = 0; h <= 23; h++) {
+        const label = `${String(h).padStart(2, "0")}시`;
+        const sel = (selectedVal !== "" && selectedVal !== null && Number(selectedVal) === h) ? "selected" : "";
+        html += `<option value="${h}" ${sel}>${label}</option>`;
+      }
+      return html;
+    }
+
+    // =========================================================
+    // 3. SUPABASE 초기화 (Publishable Key를 아래에 정확히 입력하세요)
+    // =========================================================
+    const REAL_PUBLISHABLE_KEY = promptForKeyIfNeeded();
+    function promptForKeyIfNeeded() {
+      const saved = localStorage.getItem("fc_sb_pub_key");
+      return saved || "";
+    }
+
+    let sb = null;
     let currentSession = null;
     let cachedPlans = [];
+
+    function initSupabaseClient() {
+      let key = localStorage.getItem("fc_sb_pub_key") || "";
+      if (!key || !key.startsWith("sb_publishable_")) {
+        key = window.prompt("Supabase Publishable Key (sb_publishable_...)를 한 번만 입력해 주세요:") || "";
+        key = key.trim();
+        if (key) localStorage.setItem("fc_sb_pub_key", key);
+      }
+      sb = window.supabase.createClient(SUPABASE_URL, key);
+    }
 
     function showToast(msg, duration = 3500) {
       const el = document.getElementById("toast");
@@ -458,9 +820,10 @@
     }
 
     // =========================================================
-    // 2. 인증 (SUPABASE AUTH)
+    // 4. 인증 (SUPABASE AUTH)
     // =========================================================
     async function initAuth() {
+      initSupabaseClient();
       const { data: { session } } = await sb.auth.getSession();
       handleSession(session);
       sb.auth.onAuthStateChange((_event, session) => handleSession(session));
@@ -498,7 +861,7 @@
     }
 
     // =========================================================
-    // 3. 데이터 로드 (API 사용량, 전역 자동 새로고침, 여행 계획 목록)
+    // 5. 데이터 로드
     // =========================================================
     async function loadAllData() {
       await Promise.all([loadApiUsage(), loadGlobalSettings(), loadPlans()]);
@@ -514,7 +877,10 @@
         .eq("month_key", monthKey)
         .maybeSingle();
 
-      if (error) return console.error(error);
+      if (error) {
+        console.error(error);
+        return;
+      }
       const used = data?.call_count ?? 0;
       const limit = data?.monthly_limit ?? 250;
       const pct = Math.min(100, Math.round((used / limit) * 100));
@@ -531,7 +897,10 @@
         .eq("id", 1)
         .maybeSingle();
 
-      if (error) return console.error(error);
+      if (error) {
+        console.error(error);
+        return;
+      }
       const enabled = Boolean(data?.auto_refresh_enabled);
       document.getElementById("global-auto-toggle").checked = enabled;
       document.getElementById("auto-status-text").textContent = enabled ? "ON (자동 실행 활성)" : "OFF (자동 실행 중지)";
@@ -557,11 +926,22 @@
         .order("id", { ascending: true });
 
       if (error) {
-        showToast("목록 로드 오류: " + error.message);
+        showToast("목록 로드 오류: " + error.message, 5000);
         return;
       }
       cachedPlans = data || [];
       renderPlans();
+    }
+
+    function formatLegTimeBadge(leg) {
+      const s = leg.dep_hour_start;
+      const e = leg.dep_hour_end;
+      if ((s === "" || s === undefined || s === null) && (e === "" || e === undefined || e === null)) {
+        return "이륙시간 무관";
+      }
+      const sh = String(s !== "" && s !== null && s !== undefined ? s : 0).padStart(2, "0");
+      const eh = String(e !== "" && e !== null && e !== undefined ? e : 23).padStart(2, "0");
+      return `${sh}:00 ~ ${eh}:59 이륙`;
     }
 
     function renderPlans() {
@@ -573,9 +953,11 @@
 
       container.innerHTML = cachedPlans.map(p => {
         const extra = p.extra_params || {};
-        const extraEntries = Object.entries(extra);
+        const multiLegs = Array.isArray(extra.multi_city_legs) ? extra.multi_city_legs : [];
+        const extraEntries = Object.entries(extra).filter(([k]) => k !== "multi_city_legs");
+
         const routeText = p.trip_type === "MULTI"
-          ? `다구간 (${(extra.multi_city_legs || []).length}구간)`
+          ? `다구간 (${multiLegs.length}구간)`
           : `${escapeHtml(p.origin)} → ${escapeHtml(p.destination)}`;
 
         const dateText = p.trip_type === "ROUND" && p.return_date_start
@@ -585,6 +967,19 @@
         const lastPriceText = p.last_lowest_price ? `${Number(p.last_lowest_price).toLocaleString()}원` : "미조회";
         const targetText = p.target_price ? `${Number(p.target_price).toLocaleString()}원` : "미설정";
         const checkedText = p.last_checked_at ? new Date(p.last_checked_at).toLocaleString("ko-KR") : "-";
+
+        const legsHtml = multiLegs.length ? `
+          <div class="leg-summary-list mono">
+            ${multiLegs.map((l, idx) => `
+              <div>
+                <span style="color:#777;">구간 ${idx + 1}.</span>
+                <strong>${escapeHtml(l.departure_id)} → ${escapeHtml(l.arrival_id)}</strong>
+                <span style="color:#aaa;">(${escapeHtml(l.date)})</span>
+                <span class="badge" style="margin-left:6px;">${formatLegTimeBadge(l)}</span>
+              </div>
+            `).join("")}
+          </div>
+        ` : "";
 
         const tagsHtml = extraEntries.map(([k, v]) => {
           const valStr = typeof v === "object" ? JSON.stringify(v) : String(v);
@@ -610,6 +1005,8 @@
               </label>
             </div>
 
+            ${legsHtml}
+
             <div class="plan-meta mono">
               <div class="meta-item"><span>최근 최저가</span><strong>${lastPriceText}</strong></div>
               <div class="meta-item"><span>목표 알림가</span><strong>${targetText}</strong></div>
@@ -630,7 +1027,7 @@
     }
 
     // =========================================================
-    // 4. 새 여행 계획 생성 & 동적 변수 관리
+    // 6. 새 여행 계획 생성 & 동적 변수 관리
     // =========================================================
     function switchTab(tabName, btnEl) {
       document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
@@ -659,19 +1056,50 @@
       }
     }
 
-    function addMultiLegRow(containerId, dep = "", arr = "", date = "") {
+    function addMultiLegRow(containerId, dep = "", arr = "", date = "", depHrStart = "", depHrEnd = "") {
       const wrap = document.getElementById(containerId);
-      const row = document.createElement("div");
-      row.className = "kv-row";
-      row.innerHTML = `
-        <input type="text" class="leg-dep" placeholder="출발 (예: ICN)" value="${escapeHtml(dep)}" style="text-transform:uppercase;" />
-        <input type="text" class="leg-arr" placeholder="도착 (예: PVG)" value="${escapeHtml(arr)}" style="text-transform:uppercase;" />
-        <div style="display:flex; gap:6px;">
-          <input type="date" class="leg-date" value="${escapeHtml(date)}" />
-          <button type="button" class="btn btn-danger" onclick="this.closest('.kv-row').remove()">✕</button>
+      const idx = wrap.children.length + 1;
+      const card = document.createElement("div");
+      card.className = "leg-card";
+      card.innerHTML = `
+        <div class="leg-top">
+          <span class="mono">LEG #${idx}</span>
+          <button type="button" class="btn btn-danger" style="padding:3px 8px; font-size:11px;" onclick="this.closest('.leg-card').remove()">구간 삭제</button>
+        </div>
+        <div class="leg-grid">
+          <div class="field">
+            <label>출발 공항</label>
+            <div class="airport-wrap">
+              <input type="text" class="leg-dep" placeholder="도시/공항/코드" value="${escapeHtml(dep)}" autocomplete="off" />
+              <div class="airport-dropdown"></div>
+            </div>
+            <div class="airport-hint leg-dep-hint"></div>
+          </div>
+          <div class="field">
+            <label>도착 공항</label>
+            <div class="airport-wrap">
+              <input type="text" class="leg-arr" placeholder="도시/공항/코드" value="${escapeHtml(arr)}" autocomplete="off" />
+              <div class="airport-dropdown"></div>
+            </div>
+            <div class="airport-hint leg-arr-hint"></div>
+          </div>
+          <div class="field">
+            <label>출발 날짜</label>
+            <input type="date" class="leg-date" value="${escapeHtml(date)}" />
+          </div>
+          <div class="field">
+            <label>이륙 희망 시간대 (시)</label>
+            <div class="time-range-box">
+              <select class="leg-hr-start">${buildHourOptionsHtml(depHrStart, "시작")}</select>
+              <span style="color:#666;">~</span>
+              <select class="leg-hr-end">${buildHourOptionsHtml(depHrEnd, "종료")}</select>
+            </div>
+          </div>
         </div>
       `;
-      wrap.appendChild(row);
+      wrap.appendChild(card);
+      bindAirportAutocomplete(card.querySelector(".leg-dep"), card.querySelector(".leg-dep-hint"));
+      bindAirportAutocomplete(card.querySelector(".leg-arr"), card.querySelector(".leg-arr-hint"));
     }
 
     function addKvRow(containerId, key = "", val = "") {
@@ -679,8 +1107,8 @@
       const row = document.createElement("div");
       row.className = "kv-row";
       row.innerHTML = `
-        <input type="text" class="kv-key mono" placeholder="변수 키 (예: outbound_times)" value="${escapeHtml(key)}" />
-        <input type="text" class="kv-val mono" placeholder="값 (예: 8,20)" value="${escapeHtml(val)}" />
+        <input type="text" class="kv-key mono" placeholder="변수 키 (예: include_airlines)" value="${escapeHtml(key)}" />
+        <input type="text" class="kv-val mono" placeholder="값 (예: KE,OZ)" value="${escapeHtml(val)}" />
         <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">✕</button>
       `;
       wrap.appendChild(row);
@@ -692,13 +1120,30 @@
         const k = row.querySelector(".kv-key").value.trim();
         const rawV = row.querySelector(".kv-val").value.trim();
         if (!k || rawV === "") return;
-        // JSON 배열/객체 형태면 파싱, 숫자면 숫자로 변환
         if ((rawV.startsWith("[") && rawV.endsWith("]")) || (rawV.startsWith("{") && rawV.endsWith("}"))) {
           try { obj[k] = JSON.parse(rawV); return; } catch (_) {}
         }
         obj[k] = /^-?\d+$/.test(rawV) ? Number(rawV) : rawV;
       });
       return obj;
+    }
+
+    function collectMultiLegs(containerId) {
+      const legs = [];
+      document.querySelectorAll(`#${containerId} .leg-card`).forEach(card => {
+        const d = card.querySelector(".leg-dep").value.trim().toUpperCase();
+        const a = card.querySelector(".leg-arr").value.trim().toUpperCase();
+        const dt = card.querySelector(".leg-date").value;
+        const sHr = card.querySelector(".leg-hr-start").value;
+        const eHr = card.querySelector(".leg-hr-end").value;
+        if (d && a && dt) {
+          const legObj = { departure_id: d, arrival_id: a, date: dt };
+          if (sHr !== "") legObj.dep_hour_start = Number(sHr);
+          if (eHr !== "") legObj.dep_hour_end = Number(eHr);
+          legs.push(legObj);
+        }
+      });
+      return legs;
     }
 
     async function createPlan() {
@@ -718,13 +1163,7 @@
       let returnStart = null;
 
       if (tripType === "MULTI") {
-        const legs = [];
-        document.querySelectorAll("#new-multi-legs .kv-row").forEach(r => {
-          const d = r.querySelector(".leg-dep").value.trim().toUpperCase();
-          const a = r.querySelector(".leg-arr").value.trim().toUpperCase();
-          const dt = r.querySelector(".leg-date").value;
-          if (d && a && dt) legs.push({ departure_id: d, arrival_id: a, date: dt });
-        });
+        const legs = collectMultiLegs("new-multi-legs");
         if (legs.length < 2) return showToast("다구간 여정은 최소 2개 구간이 필요합니다.");
         origin = legs[0].departure_id;
         destination = legs[legs.length - 1].arrival_id;
@@ -741,6 +1180,17 @@
         }
         if (tripType === "ROUND" && !returnStart) {
           return showToast("왕복 여정은 오는 날을 입력해야 합니다.");
+        }
+
+        const depS = document.getElementById("new-dep-hr-start").value;
+        const depE = document.getElementById("new-dep-hr-end").value;
+        if (depS !== "" || depE !== "") {
+          extraParams.outbound_times = `${depS !== "" ? depS : 0},${depE !== "" ? depE : 23}`;
+        }
+        const retS = document.getElementById("new-ret-hr-start").value;
+        const retE = document.getElementById("new-ret-hr-end").value;
+        if (tripType === "ROUND" && (retS !== "" || retE !== "")) {
+          extraParams.return_times = `${retS !== "" ? retS : 0},${retE !== "" ? retE : 23}`;
         }
       }
 
@@ -762,7 +1212,7 @@
       };
 
       const { error } = await sb.from("flight_plans").insert(payload);
-      if (error) return showToast("저장 실패: " + error.message);
+      if (error) return showToast("저장 실패: " + error.message, 5000);
 
       showToast("새 여행 계획이 등록되었습니다.");
       document.getElementById("new-title").value = "";
@@ -772,7 +1222,7 @@
     }
 
     // =========================================================
-    // 5. 기존 여행 계획 수정 / 토글 / 삭제 / 즉시 실행
+    // 7. 기존 여행 계획 수정 / 토글 / 삭제 / 즉시 실행
     // =========================================================
     async function togglePlanActive(id, isActive) {
       const { error } = await sb.from("flight_plans").update({ is_active: isActive }).eq("id", id);
@@ -785,21 +1235,56 @@
       const p = cachedPlans.find(item => item.id === id);
       if (!p) return;
 
+      const extra = p.extra_params || {};
+      const isMulti = p.trip_type === "MULTI" || Array.isArray(extra.multi_city_legs);
+
       document.getElementById("edit-id").value = p.id;
+      document.getElementById("edit-trip-type").value = isMulti ? "MULTI" : p.trip_type;
       document.getElementById("edit-title").value = p.title;
-      document.getElementById("edit-origin").value = p.origin;
-      document.getElementById("edit-dest").value = p.destination;
-      document.getElementById("edit-depart").value = p.depart_date_start || "";
-      document.getElementById("edit-return").value = p.return_date_start || "";
       document.getElementById("edit-adults").value = p.adults || 1;
       document.getElementById("edit-stops").value = p.max_stops ?? 0;
       document.getElementById("edit-target-price").value = p.target_price ?? "";
       document.getElementById("edit-percentile").value = p.percentile_threshold ?? 20;
 
+      const stdWrap = document.getElementById("edit-standard-dates");
+      const multiWrap = document.getElementById("edit-multi-wrap");
+
+      if (isMulti) {
+        stdWrap.style.display = "none";
+        multiWrap.style.display = "block";
+        const legsContainer = document.getElementById("edit-multi-legs");
+        legsContainer.innerHTML = "";
+        (extra.multi_city_legs || []).forEach(l => {
+          addMultiLegRow(
+            "edit-multi-legs",
+            l.departure_id || "",
+            l.arrival_id || "",
+            l.date || "",
+            l.dep_hour_start ?? "",
+            l.dep_hour_end ?? ""
+          );
+        });
+      } else {
+        stdWrap.style.display = "grid";
+        multiWrap.style.display = "none";
+        document.getElementById("edit-origin").value = p.origin;
+        document.getElementById("edit-dest").value = p.destination;
+        document.getElementById("edit-depart").value = p.depart_date_start || "";
+        document.getElementById("edit-return").value = p.return_date_start || "";
+        document.getElementById("edit-return-wrap").style.display = p.trip_type === "ROUND" ? "flex" : "none";
+
+        const [ds, de] = String(extra.outbound_times || "").split(",");
+        const [rs, re] = String(extra.return_times || "").split(",");
+        document.getElementById("edit-dep-hr-start").innerHTML = buildHourOptionsHtml(ds ?? "", "시작");
+        document.getElementById("edit-dep-hr-end").innerHTML = buildHourOptionsHtml(de ?? "", "종료");
+        document.getElementById("edit-ret-hr-start").innerHTML = buildHourOptionsHtml(rs ?? "", "시작");
+        document.getElementById("edit-ret-hr-end").innerHTML = buildHourOptionsHtml(re ?? "", "종료");
+      }
+
       const kvList = document.getElementById("edit-kv-list");
       kvList.innerHTML = "";
-      const extra = p.extra_params || {};
       Object.entries(extra).forEach(([k, v]) => {
+        if (["multi_city_legs", "outbound_times", "return_times"].includes(k)) return;
         const valStr = typeof v === "object" ? JSON.stringify(v) : String(v);
         addKvRow("edit-kv-list", k, valStr);
       });
@@ -813,23 +1298,53 @@
 
     async function saveEditedPlan() {
       const id = Number(document.getElementById("edit-id").value);
-      const depart = document.getElementById("edit-depart").value;
-      const ret = document.getElementById("edit-return").value || null;
+      const tripType = document.getElementById("edit-trip-type").value;
       const targetRaw = document.getElementById("edit-target-price").value.trim();
+      const extraParams = collectKvParams("edit-kv-list");
+
+      let origin = "";
+      let destination = "";
+      let departStart = "";
+      let returnStart = null;
+
+      if (tripType === "MULTI") {
+        const legs = collectMultiLegs("edit-multi-legs");
+        if (legs.length < 2) return showToast("다구간 여정은 최소 2개 구간이 필요합니다.");
+        origin = legs[0].departure_id;
+        destination = legs[legs.length - 1].arrival_id;
+        departStart = legs[0].date;
+        extraParams.multi_city_legs = legs;
+      } else {
+        origin = document.getElementById("edit-origin").value.trim().toUpperCase();
+        destination = document.getElementById("edit-dest").value.trim().toUpperCase();
+        departStart = document.getElementById("edit-depart").value;
+        returnStart = tripType === "ROUND" ? (document.getElementById("edit-return").value || null) : null;
+
+        const depS = document.getElementById("edit-dep-hr-start").value;
+        const depE = document.getElementById("edit-dep-hr-end").value;
+        if (depS !== "" || depE !== "") {
+          extraParams.outbound_times = `${depS !== "" ? depS : 0},${depE !== "" ? depE : 23}`;
+        }
+        const retS = document.getElementById("edit-ret-hr-start").value;
+        const retE = document.getElementById("edit-ret-hr-end").value;
+        if (tripType === "ROUND" && (retS !== "" || retE !== "")) {
+          extraParams.return_times = `${retS !== "" ? retS : 0},${retE !== "" ? retE : 23}`;
+        }
+      }
 
       const payload = {
         title: document.getElementById("edit-title").value.trim(),
-        origin: document.getElementById("edit-origin").value.trim().toUpperCase(),
-        destination: document.getElementById("edit-dest").value.trim().toUpperCase(),
-        depart_date_start: depart,
-        depart_date_end: depart,
-        return_date_start: ret,
-        return_date_end: ret,
+        origin,
+        destination,
+        depart_date_start: departStart,
+        depart_date_end: departStart,
+        return_date_start: returnStart,
+        return_date_end: returnStart,
         adults: Number(document.getElementById("edit-adults").value || 1),
         max_stops: Number(document.getElementById("edit-stops").value || 0),
         target_price: targetRaw ? Number(targetRaw) : null,
         percentile_threshold: Number(document.getElementById("edit-percentile").value || 20),
-        extra_params: collectKvParams("edit-kv-list"),
+        extra_params: extraParams,
       };
 
       const { error } = await sb.from("flight_plans").update(payload).eq("id", id);
@@ -867,11 +1382,23 @@
       }
 
       showToast("실행 시작! 약 25초 후 디스코드로 리포트가 도착합니다.", 5000);
-      // 28초 뒤 대시보드 최저가 및 API 사용량 자동 갱신
       setTimeout(loadAllData, 28000);
     }
 
-    initAuth();
+    // 초기 UI 바인딩
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("new-dep-hr-start").innerHTML = buildHourOptionsHtml("", "이륙 시작");
+      document.getElementById("new-dep-hr-end").innerHTML = buildHourOptionsHtml("", "이륙 종료");
+      document.getElementById("new-ret-hr-start").innerHTML = buildHourOptionsHtml("", "귀국 시작");
+      document.getElementById("new-ret-hr-end").innerHTML = buildHourOptionsHtml("", "귀국 종료");
+
+      bindAirportAutocomplete(document.getElementById("new-origin"), document.getElementById("new-origin-hint"));
+      bindAirportAutocomplete(document.getElementById("new-dest"), document.getElementById("new-dest-hint"));
+      bindAirportAutocomplete(document.getElementById("edit-origin"), document.getElementById("edit-origin-hint"));
+      bindAirportAutocomplete(document.getElementById("edit-dest"), document.getElementById("edit-dest-hint"));
+
+      initAuth();
+    });
   </script>
 </body>
 </html>

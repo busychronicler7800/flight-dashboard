@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>FLIGHT CHRONICLE // CONTROL</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #000000;
+      --surface: #0a0a0a;
+      --border: #262626;
+      --border-strong: #525252;
+      --text: #ffffff;
+      --muted: #8a8a8a;
+      --accent: #ffffff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Helvetica Neue", Helvetica, Arial, -apple-system, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    .mono { font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .container { max-width: 960px; margin: 0 auto; padding: 24px 16px 80px; }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    header h1 { font-size: 15px; font-weight: 700; letter-spacing: 0.08em; }
+    .btn {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border-strong);
+      padding: 7px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn:hover { background: #1a1a1a; border-color: #ffffff; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: #ffffff; color: #000000; border-color: #ffffff; }
+    .btn-primary:hover { background: #d4d4d4; }
+    .btn-danger { border-color: #444; color: #999; }
+    .btn-danger:hover { border-color: #ff4d4d; color: #ff4d4d; background: transparent; }
+
+    /* Telemetry Bar */
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .stat-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .stat-label { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+    .stat-value { font-size: 20px; font-weight: 700; }
+    .progress-track { width: 100%; height: 4px; background: #1f1f1f; overflow: hidden; }
+    .progress-fill { height: 100%; background: #ffffff; width: 0%; transition: width 0.3s; }
+
+    /* Toggle Switch */
+    .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer; inset: 0;
+      background-color: #1c1c1c; border: 1px solid #444; transition: .2s;
+    }
+    .slider:before {
+      position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px;
+      background-color: #888; transition: .2s;
+    }
+    input:checked + .slider { background-color: #ffffff; border-color: #ffffff; }
+    input:checked + .slider:before { transform: translateX(20px); background-color: #000000; }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+      gap: 4px;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--muted);
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .tab-btn.active { color: #ffffff; border-bottom-color: #ffffff; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Plan Cards */
+    .plan-list { display: flex; flex-direction: column; gap: 14px; }
+    .plan-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 18px;
+      transition: border-color 0.15s;
+    }
+    .plan-card:hover { border-color: #444; }
+    .plan-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .plan-title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border: 1px solid #444;
+      color: #ccc;
+      letter-spacing: 0.05em;
+    }
+    .badge.on { border-color: #fff; color: #000; background: #fff; font-weight: 700; }
+    .plan-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      padding: 12px 0;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+      margin-bottom: 12px;
+      font-size: 12px;
+    }
+    .meta-item span { display: block; color: var(--muted); font-size: 11px; }
+    .extra-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .tag { font-size: 11px; background: #141414; border: 1px solid #2b2b2b; padding: 2px 8px; color: #bbb; }
+    .plan-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+    /* Forms */
+    .form-card { background: var(--surface); border: 1px solid var(--border); padding: 20px; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 16px; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 11px; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; }
+    input[type="text"], input[type="number"], input[type="date"], input[type="email"], input[type="password"], select {
+      background: #000000;
+      border: 1px solid var(--border-strong);
+      color: #ffffff;
+      padding: 9px 10px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+    }
+    input:focus, select:focus { border-color: #ffffff; }
+    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+
+    .kv-section { border-top: 1px solid var(--border); padding-top: 16px; margin-top: 16px; }
+    .kv-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-bottom: 8px; }
+    .preset-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
+    .chip {
+      background: #121212; border: 1px solid #333; color: #aaa;
+      font-size: 11px; padding: 3px 8px; cursor: pointer;
+    }
+    .chip:hover { border-color: #fff; color: #fff; }
+
+    /* Auth Box */
+    .auth-wrap { max-width: 380px; margin: 100px auto; background: var(--surface); border: 1px solid var(--border); padding: 28px; }
+    .auth-wrap h2 { font-size: 16px; margin-bottom: 6px; letter-spacing: 0.06em; }
+    .auth-wrap p { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+
+    /* Modal */
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+      z-index: 50; align-items: center; justify-content: center; padding: 16px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: #0a0a0a; border: 1px solid #555; width: 100%; max-width: 640px;
+      max-height: 90vh; overflow-y: auto; padding: 22px;
+    }
+
+    /* Toast */
+    #toast {
+      position: fixed; bottom: 20px; right: 20px; background: #ffffff; color: #000000;
+      padding: 12px 18px; font-size: 12px; font-weight: 700; border: 1px solid #000;
+      display: none; z-index: 100; max-width: 340px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 로그인 화면 -->
+  <div id="auth-view" class="auth-wrap" style="display:none;">
+    <h2>FLIGHT CHRONICLE // AUTH</h2>
+    <p>관리자 계정(kangsihoo0530@gmail.com) 전용 제어 패널입니다.</p>
+    <div class="field" style="margin-bottom:12px;">
+      <label>Email</label>
+      <input type="email" id="login-email" value="kangsihoo0530@gmail.com" />
+    </div>
+    <div class="field" style="margin-bottom:16px;">
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="비밀번호 입력" />
+    </div>
+    <button class="btn btn-primary" style="width:100%; margin-bottom:8px;" onclick="signInWithPassword()">이메일 로그인</button>
+    <button class="btn" style="width:100%;" onclick="signInWithGoogle()">Google 계정으로 계속하기</button>
+  </div>
+
+  <!-- 메인 대시보드 화면 -->
+  <div id="app-view" class="container" style="display:none;">
+    <header>
+      <h1>FLIGHT CHRONICLE // CONTROL</h1>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn" onclick="loadAllData()">새로고침</button>
+        <button class="btn btn-danger" onclick="signOut()">로그아웃</button>
+      </div>
+    </header>
+
+    <!-- 상단 상태 바: API 사용량 + 전체 자동 새로고침 + 전체 즉시 실행 -->
+    <div class="telemetry-grid">
+      <div class="stat-box">
+        <div class="stat-label">SERPAPI MONTHLY USAGE (<span id="usage-month">-</span>)</div>
+        <div class="stat-value mono"><span id="usage-count">-</span> / <span id="usage-limit">-</span> <span style="font-size:12px; font-weight:400; color:#888;">회</span></div>
+        <div class="progress-track"><div id="usage-bar" class="progress-fill"></div></div>
+      </div>
+
+      <div class="stat-box">
+        <div class="stat-label">GLOBAL AUTO-REFRESH (09:00 / 15:00 / 21:00)</div>
+        <div class="switch-row">
+          <span id="auto-status-text" style="font-weight:700; font-size:14px;">확인 중...</span>
+          <label class="switch">
+            <input type="checkbox" id="global-auto-toggle" onchange="toggleGlobalAutoRefresh(this.checked)" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div style="font-size:11px; color:var(--muted);">OFF 시 정해진 시간에도 API를 호출하지 않습니다.</div>
+      </div>
+
+      <div class="stat-box">
+        <div class="stat-label">MANUAL DISPATCH</div>
+        <button class="btn btn-primary" style="width:100%; padding:11px;" onclick="triggerWorkflow('')">▶ 활성 노선 전체 지금 즉시 알림</button>
+        <div style="font-size:11px; color:var(--muted);">실행 후 약 20~30초 뒤 디스코드로 전송됩니다.</div>
+      </div>
+    </div>
+
+    <!-- 탭 메뉴 -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('existing', this)">[01] 기존 여행 계획</button>
+      <button class="tab-btn" onclick="switchTab('create', this)">[02] 새 여행 계획 추가</button>
+    </div>
+
+    <!-- 탭 1: 기존 여행 계획 목록 -->
+    <div id="tab-existing" class="tab-panel active">
+      <div id="plan-list" class="plan-list"></div>
+    </div>
+
+    <!-- 탭 2: 새 여행 계획 생성 폼 -->
+    <div id="tab-create" class="tab-panel">
+      <div class="form-card">
+        <div class="form-grid">
+          <div class="field">
+            <label>여행 계획 이름 *</label>
+            <input type="text" id="new-title" placeholder="예: 2027 도쿄 왕복" />
+          </div>
+          <div class="field">
+            <label>여정 유형 *</label>
+            <select id="new-trip-type" onchange="handleTripTypeChange('new')">
+              <option value="ROUND">왕복 (ROUND)</option>
+              <option value="ONEWAY">편도 (ONEWAY)</option>
+              <option value="MULTI">다구간 (MULTI-CITY)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>성인 인원</label>
+            <input type="number" id="new-adults" value="1" min="1" max="9" />
+          </div>
+          <div class="field">
+            <label>경유 허용 (SerpApi stops)</label>
+            <select id="new-stops">
+              <option value="0">0 — 전체 허용</option>
+              <option value="1">1 — 직항만 (Nonstop)</option>
+              <option value="2">2 — 1회 이하 경유</option>
+              <option value="3">3 — 2회 이하 경유</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 왕복 / 편도 입력 -->
+        <div id="new-standard-dates" class="form-grid">
+          <div class="field">
+            <label>출발 공항 (IATA) *</label>
+            <input type="text" id="new-origin" placeholder="ICN" style="text-transform:uppercase;" />
+          </div>
+          <div class="field">
+            <label>도착 공항 (IATA) *</label>
+            <input type="text" id="new-dest" placeholder="NRT" style="text-transform:uppercase;" />
+          </div>
+          <div class="field">
+            <label>가는 날 *</label>
+            <input type="date" id="new-depart" />
+          </div>
+          <div class="field" id="new-return-wrap">
+            <label>오는 날 (왕복 필수)</label>
+            <input type="date" id="new-return" />
+          </div>
+        </div>
+
+        <!-- 다구간(MULTI) 입력 -->
+        <div id="new-multi-wrap" style="display:none; margin-bottom:16px;">
+          <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:8px;">다구간 여정 (MULTI_CITY_LEGS)</label>
+          <div id="new-multi-legs"></div>
+          <button type="button" class="btn" onclick="addMultiLegRow('new-multi-legs')">+ 구간 추가</button>
+        </div>
+
+        <div class="form-grid">
+          <div class="field">
+            <label>목표 알림 가격 (원, 선택)</label>
+            <input type="number" id="new-target-price" placeholder="예: 350000" />
+          </div>
+          <div class="field">
+            <label>역대 하위 백분위 알림 기준 (%)</label>
+            <input type="number" id="new-percentile" value="20" min="1" max="100" />
+          </div>
+        </div>
+
+        <!-- 동적 커스텀 변수 (extra_params) -->
+        <div class="kv-section">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <label style="font-size:12px; font-weight:700;">커스텀 SerpApi 변수 (extra_params)</label>
+            <button type="button" class="btn" onclick="addKvRow('new-kv-list')">+ 변수 추가</button>
+          </div>
+          <div class="preset-chips">
+            <span class="chip" onclick="addKvRow('new-kv-list', 'outbound_times', '8,20')">+ outbound_times (출발시간)</span>
+            <span class="chip" onclick="addKvRow('new-kv-list', 'return_times', '12,22')">+ return_times (귀국시간)</span>
+            <span class="chip" onclick="addKvRow('new-kv-list', 'include_airlines', 'KE,OZ')">+ include_airlines (항공사 포함)</span>
+            <span class="chip" onclick="addKvRow('new-kv-list', 'exclude_airlines', '')">+ exclude_airlines (항공사 제외)</span>
+            <span class="chip" onclick="addKvRow('new-kv-list', 'bags', '1')">+ bags (기내수하물)</span>
+            <span class="chip" onclick="addKvRow('new-kv-list', 'max_duration', '600')">+ max_duration (최대비행분)</span>
+            <span class="chip" onclick="addKvRow('new-kv-list', 'travel_class', '1')">+ travel_class (좌석등급)</span>
+          </div>
+          <div id="new-kv-list"></div>
+        </div>
+
+        <div style="margin-top:20px; display:flex; justify-content:flex-end;">
+          <button class="btn btn-primary" style="padding:11px 24px;" onclick="createPlan()">여행 계획 저장 및 트래킹 등록</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 수정 모달 -->
+  <div id="edit-modal" class="modal-backdrop">
+    <div class="modal">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="font-size:15px;">여행 계획 수정</h3>
+        <button class="btn" onclick="closeEditModal()">닫기</button>
+      </div>
+      <input type="hidden" id="edit-id" />
+      <div class="form-grid">
+        <div class="field">
+          <label>여행 계획 이름</label>
+          <input type="text" id="edit-title" />
+        </div>
+        <div class="field">
+          <label>출발 공항</label>
+          <input type="text" id="edit-origin" style="text-transform:uppercase;" />
+        </div>
+        <div class="field">
+          <label>도착 공항</label>
+          <input type="text" id="edit-dest" style="text-transform:uppercase;" />
+        </div>
+        <div class="field">
+          <label>가는 날</label>
+          <input type="date" id="edit-depart" />
+        </div>
+        <div class="field">
+          <label>오는 날</label>
+          <input type="date" id="edit-return" />
+        </div>
+        <div class="field">
+          <label>성인 인원</label>
+          <input type="number" id="edit-adults" min="1" max="9" />
+        </div>
+        <div class="field">
+          <label>경유 허용 (stops)</label>
+          <select id="edit-stops">
+            <option value="0">0 — 전체 허용</option>
+            <option value="1">1 — 직항만</option>
+            <option value="2">2 — 1회 이하</option>
+            <option value="3">3 — 2회 이하</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>목표 알림 가격 (원)</label>
+          <input type="number" id="edit-target-price" />
+        </div>
+        <div class="field">
+          <label>역대 하위 백분위 기준 (%)</label>
+          <input type="number" id="edit-percentile" min="1" max="100" />
+        </div>
+      </div>
+
+      <div class="kv-section">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <label style="font-size:12px; font-weight:700;">커스텀 변수 (extra_params)</label>
+          <button type="button" class="btn" onclick="addKvRow('edit-kv-list')">+ 변수 추가</button>
+        </div>
+        <div id="edit-kv-list"></div>
+      </div>
+
+      <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:8px;">
+        <button class="btn" onclick="closeEditModal()">취소</button>
+        <button class="btn btn-primary" onclick="saveEditedPlan()">변경사항 저장</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    // =========================================================
+    // 1. SUPABASE 설정 (본인의 Publishable Key를 아래에 붙여넣으세요)
+    // =========================================================
+    const SUPABASE_URL = "https://riapxjwtalqvaevsnpnb.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_A3BcYO4bYJZGBbKmFivEaw_vTQqYIae";
+
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    let currentSession = null;
+    let cachedPlans = [];
+
+    function showToast(msg, duration = 3500) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.style.display = "block";
+      clearTimeout(el._timer);
+      el._timer = setTimeout(() => { el.style.display = "none"; }, duration);
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? "").replace(/[&<>"']/g, s => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[s]));
+    }
+
+    // =========================================================
+    // 2. 인증 (SUPABASE AUTH)
+    // =========================================================
+    async function initAuth() {
+      const { data: { session } } = await sb.auth.getSession();
+      handleSession(session);
+      sb.auth.onAuthStateChange((_event, session) => handleSession(session));
+    }
+
+    function handleSession(session) {
+      currentSession = session;
+      if (session && session.user?.email === "kangsihoo0530@gmail.com") {
+        document.getElementById("auth-view").style.display = "none";
+        document.getElementById("app-view").style.display = "block";
+        loadAllData();
+      } else {
+        document.getElementById("auth-view").style.display = "block";
+        document.getElementById("app-view").style.display = "none";
+      }
+    }
+
+    async function signInWithPassword() {
+      const email = document.getElementById("login-email").value.trim();
+      const password = document.getElementById("login-password").value;
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) showToast("로그인 실패: " + error.message);
+    }
+
+    async function signInWithGoogle() {
+      const { error } = await sb.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin },
+      });
+      if (error) showToast("Google 로그인 오류: " + error.message);
+    }
+
+    async function signOut() {
+      await sb.auth.signOut();
+    }
+
+    // =========================================================
+    // 3. 데이터 로드 (API 사용량, 전역 자동 새로고침, 여행 계획 목록)
+    // =========================================================
+    async function loadAllData() {
+      await Promise.all([loadApiUsage(), loadGlobalSettings(), loadPlans()]);
+    }
+
+    async function loadApiUsage() {
+      const monthKey = new Date().toISOString().slice(0, 7);
+      document.getElementById("usage-month").textContent = monthKey;
+
+      const { data, error } = await sb
+        .from("flight_api_usage")
+        .select("*")
+        .eq("month_key", monthKey)
+        .maybeSingle();
+
+      if (error) return console.error(error);
+      const used = data?.call_count ?? 0;
+      const limit = data?.monthly_limit ?? 250;
+      const pct = Math.min(100, Math.round((used / limit) * 100));
+
+      document.getElementById("usage-count").textContent = used.toLocaleString();
+      document.getElementById("usage-limit").textContent = limit.toLocaleString();
+      document.getElementById("usage-bar").style.width = pct + "%";
+    }
+
+    async function loadGlobalSettings() {
+      const { data, error } = await sb
+        .from("flight_settings")
+        .select("*")
+        .eq("id", 1)
+        .maybeSingle();
+
+      if (error) return console.error(error);
+      const enabled = Boolean(data?.auto_refresh_enabled);
+      document.getElementById("global-auto-toggle").checked = enabled;
+      document.getElementById("auto-status-text").textContent = enabled ? "ON (자동 실행 활성)" : "OFF (자동 실행 중지)";
+    }
+
+    async function toggleGlobalAutoRefresh(checked) {
+      const { error } = await sb
+        .from("flight_settings")
+        .upsert({ id: 1, auto_refresh_enabled: checked, updated_at: new Date().toISOString() });
+
+      if (error) {
+        showToast("설정 변경 실패: " + error.message);
+        return;
+      }
+      document.getElementById("auto-status-text").textContent = checked ? "ON (자동 실행 활성)" : "OFF (자동 실행 중지)";
+      showToast(checked ? "자동 새로고침이 켜졌습니다." : "자동 새로고침이 꺼졌습니다.");
+    }
+
+    async function loadPlans() {
+      const { data, error } = await sb
+        .from("flight_plans")
+        .select("*")
+        .order("id", { ascending: true });
+
+      if (error) {
+        showToast("목록 로드 오류: " + error.message);
+        return;
+      }
+      cachedPlans = data || [];
+      renderPlans();
+    }
+
+    function renderPlans() {
+      const container = document.getElementById("plan-list");
+      if (!cachedPlans.length) {
+        container.innerHTML = `<div class="stat-box" style="text-align:center; color:var(--muted); padding:40px;">등록된 여행 계획이 없습니다. [02] 새 여행 계획 추가 탭에서 등록해 주세요.</div>`;
+        return;
+      }
+
+      container.innerHTML = cachedPlans.map(p => {
+        const extra = p.extra_params || {};
+        const extraEntries = Object.entries(extra);
+        const routeText = p.trip_type === "MULTI"
+          ? `다구간 (${(extra.multi_city_legs || []).length}구간)`
+          : `${escapeHtml(p.origin)} → ${escapeHtml(p.destination)}`;
+
+        const dateText = p.trip_type === "ROUND" && p.return_date_start
+          ? `${p.depart_date_start} ~ ${p.return_date_start}`
+          : `${p.depart_date_start}`;
+
+        const lastPriceText = p.last_lowest_price ? `${Number(p.last_lowest_price).toLocaleString()}원` : "미조회";
+        const targetText = p.target_price ? `${Number(p.target_price).toLocaleString()}원` : "미설정";
+        const checkedText = p.last_checked_at ? new Date(p.last_checked_at).toLocaleString("ko-KR") : "-";
+
+        const tagsHtml = extraEntries.map(([k, v]) => {
+          const valStr = typeof v === "object" ? JSON.stringify(v) : String(v);
+          return `<span class="tag mono">${escapeHtml(k)}: ${escapeHtml(valStr)}</span>`;
+        }).join("");
+
+        return `
+          <div class="plan-card">
+            <div class="plan-header">
+              <div>
+                <div class="plan-title">
+                  <span>${escapeHtml(p.title)}</span>
+                  <span class="badge ${p.is_active ? "on" : ""}">${p.is_active ? "AUTO ON" : "PAUSED"}</span>
+                  <span class="badge">${escapeHtml(p.trip_type)}</span>
+                </div>
+                <div style="font-size:12px; color:var(--muted); margin-top:4px;" class="mono">
+                  ${routeText} · ${dateText} · 성인 ${p.adults}명 · stops=${p.max_stops}
+                </div>
+              </div>
+              <label class="switch" title="이 노선 자동 추적 활성화">
+                <input type="checkbox" ${p.is_active ? "checked" : ""} onchange="togglePlanActive(${p.id}, this.checked)" />
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="plan-meta mono">
+              <div class="meta-item"><span>최근 최저가</span><strong>${lastPriceText}</strong></div>
+              <div class="meta-item"><span>목표 알림가</span><strong>${targetText}</strong></div>
+              <div class="meta-item"><span>하위 백분위 기준</span><strong>하위 ${p.percentile_threshold ?? 20}%</strong></div>
+              <div class="meta-item"><span>마지막 조회</span><strong>${checkedText}</strong></div>
+            </div>
+
+            ${tagsHtml ? `<div class="extra-tags">${tagsHtml}</div>` : ""}
+
+            <div class="plan-actions">
+              <button class="btn btn-primary" onclick="triggerWorkflow(${p.id})">▶ 지금 즉시 알림</button>
+              <button class="btn" onclick="openEditModal(${p.id})">✎ 변수 수정</button>
+              <button class="btn btn-danger" onclick="deletePlan(${p.id})">삭제</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // =========================================================
+    // 4. 새 여행 계획 생성 & 동적 변수 관리
+    // =========================================================
+    function switchTab(tabName, btnEl) {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      btnEl.classList.add("active");
+      document.getElementById("tab-" + tabName).classList.add("active");
+    }
+
+    function handleTripTypeChange(prefix) {
+      const type = document.getElementById(prefix + "-trip-type").value;
+      const stdWrap = document.getElementById(prefix + "-standard-dates");
+      const retWrap = document.getElementById(prefix + "-return-wrap");
+      const multiWrap = document.getElementById(prefix + "-multi-wrap");
+
+      if (type === "MULTI") {
+        stdWrap.style.display = "none";
+        multiWrap.style.display = "block";
+        if (!document.getElementById("new-multi-legs").children.length) {
+          addMultiLegRow("new-multi-legs");
+          addMultiLegRow("new-multi-legs");
+        }
+      } else {
+        stdWrap.style.display = "grid";
+        multiWrap.style.display = "none";
+        retWrap.style.display = type === "ROUND" ? "flex" : "none";
+      }
+    }
+
+    function addMultiLegRow(containerId, dep = "", arr = "", date = "") {
+      const wrap = document.getElementById(containerId);
+      const row = document.createElement("div");
+      row.className = "kv-row";
+      row.innerHTML = `
+        <input type="text" class="leg-dep" placeholder="출발 (예: ICN)" value="${escapeHtml(dep)}" style="text-transform:uppercase;" />
+        <input type="text" class="leg-arr" placeholder="도착 (예: PVG)" value="${escapeHtml(arr)}" style="text-transform:uppercase;" />
+        <div style="display:flex; gap:6px;">
+          <input type="date" class="leg-date" value="${escapeHtml(date)}" />
+          <button type="button" class="btn btn-danger" onclick="this.closest('.kv-row').remove()">✕</button>
+        </div>
+      `;
+      wrap.appendChild(row);
+    }
+
+    function addKvRow(containerId, key = "", val = "") {
+      const wrap = document.getElementById(containerId);
+      const row = document.createElement("div");
+      row.className = "kv-row";
+      row.innerHTML = `
+        <input type="text" class="kv-key mono" placeholder="변수 키 (예: outbound_times)" value="${escapeHtml(key)}" />
+        <input type="text" class="kv-val mono" placeholder="값 (예: 8,20)" value="${escapeHtml(val)}" />
+        <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">✕</button>
+      `;
+      wrap.appendChild(row);
+    }
+
+    function collectKvParams(containerId) {
+      const obj = {};
+      document.querySelectorAll(`#${containerId} .kv-row`).forEach(row => {
+        const k = row.querySelector(".kv-key").value.trim();
+        const rawV = row.querySelector(".kv-val").value.trim();
+        if (!k || rawV === "") return;
+        // JSON 배열/객체 형태면 파싱, 숫자면 숫자로 변환
+        if ((rawV.startsWith("[") && rawV.endsWith("]")) || (rawV.startsWith("{") && rawV.endsWith("}"))) {
+          try { obj[k] = JSON.parse(rawV); return; } catch (_) {}
+        }
+        obj[k] = /^-?\d+$/.test(rawV) ? Number(rawV) : rawV;
+      });
+      return obj;
+    }
+
+    async function createPlan() {
+      const title = document.getElementById("new-title").value.trim();
+      const tripType = document.getElementById("new-trip-type").value;
+      const adults = Number(document.getElementById("new-adults").value || 1);
+      const maxStops = Number(document.getElementById("new-stops").value || 0);
+      const targetPriceRaw = document.getElementById("new-target-price").value.trim();
+      const percentileThreshold = Number(document.getElementById("new-percentile").value || 20);
+      const extraParams = collectKvParams("new-kv-list");
+
+      if (!title) return showToast("여행 계획 이름을 입력해 주세요.");
+
+      let origin = "";
+      let destination = "";
+      let departStart = "";
+      let returnStart = null;
+
+      if (tripType === "MULTI") {
+        const legs = [];
+        document.querySelectorAll("#new-multi-legs .kv-row").forEach(r => {
+          const d = r.querySelector(".leg-dep").value.trim().toUpperCase();
+          const a = r.querySelector(".leg-arr").value.trim().toUpperCase();
+          const dt = r.querySelector(".leg-date").value;
+          if (d && a && dt) legs.push({ departure_id: d, arrival_id: a, date: dt });
+        });
+        if (legs.length < 2) return showToast("다구간 여정은 최소 2개 구간이 필요합니다.");
+        origin = legs[0].departure_id;
+        destination = legs[legs.length - 1].arrival_id;
+        departStart = legs[0].date;
+        extraParams.multi_city_legs = legs;
+      } else {
+        origin = document.getElementById("new-origin").value.trim().toUpperCase();
+        destination = document.getElementById("new-dest").value.trim().toUpperCase();
+        departStart = document.getElementById("new-depart").value;
+        returnStart = tripType === "ROUND" ? document.getElementById("new-return").value : null;
+
+        if (!origin || !destination || !departStart) {
+          return showToast("출발지, 도착지, 가는 날을 모두 입력해 주세요.");
+        }
+        if (tripType === "ROUND" && !returnStart) {
+          return showToast("왕복 여정은 오는 날을 입력해야 합니다.");
+        }
+      }
+
+      const payload = {
+        title,
+        origin,
+        destination,
+        trip_type: tripType,
+        depart_date_start: departStart,
+        depart_date_end: departStart,
+        return_date_start: returnStart,
+        return_date_end: returnStart,
+        adults,
+        max_stops: maxStops,
+        target_price: targetPriceRaw ? Number(targetPriceRaw) : null,
+        percentile_threshold: percentileThreshold,
+        extra_params: extraParams,
+        is_active: true,
+      };
+
+      const { error } = await sb.from("flight_plans").insert(payload);
+      if (error) return showToast("저장 실패: " + error.message);
+
+      showToast("새 여행 계획이 등록되었습니다.");
+      document.getElementById("new-title").value = "";
+      document.getElementById("new-kv-list").innerHTML = "";
+      await loadPlans();
+      switchTab("existing", document.querySelectorAll(".tab-btn")[0]);
+    }
+
+    // =========================================================
+    // 5. 기존 여행 계획 수정 / 토글 / 삭제 / 즉시 실행
+    // =========================================================
+    async function togglePlanActive(id, isActive) {
+      const { error } = await sb.from("flight_plans").update({ is_active: isActive }).eq("id", id);
+      if (error) return showToast("상태 변경 실패: " + error.message);
+      showToast(isActive ? "자동 추적이 활성화되었습니다." : "자동 추적이 일시중지되었습니다.");
+      await loadPlans();
+    }
+
+    function openEditModal(id) {
+      const p = cachedPlans.find(item => item.id === id);
+      if (!p) return;
+
+      document.getElementById("edit-id").value = p.id;
+      document.getElementById("edit-title").value = p.title;
+      document.getElementById("edit-origin").value = p.origin;
+      document.getElementById("edit-dest").value = p.destination;
+      document.getElementById("edit-depart").value = p.depart_date_start || "";
+      document.getElementById("edit-return").value = p.return_date_start || "";
+      document.getElementById("edit-adults").value = p.adults || 1;
+      document.getElementById("edit-stops").value = p.max_stops ?? 0;
+      document.getElementById("edit-target-price").value = p.target_price ?? "";
+      document.getElementById("edit-percentile").value = p.percentile_threshold ?? 20;
+
+      const kvList = document.getElementById("edit-kv-list");
+      kvList.innerHTML = "";
+      const extra = p.extra_params || {};
+      Object.entries(extra).forEach(([k, v]) => {
+        const valStr = typeof v === "object" ? JSON.stringify(v) : String(v);
+        addKvRow("edit-kv-list", k, valStr);
+      });
+
+      document.getElementById("edit-modal").classList.add("open");
+    }
+
+    function closeEditModal() {
+      document.getElementById("edit-modal").classList.remove("open");
+    }
+
+    async function saveEditedPlan() {
+      const id = Number(document.getElementById("edit-id").value);
+      const depart = document.getElementById("edit-depart").value;
+      const ret = document.getElementById("edit-return").value || null;
+      const targetRaw = document.getElementById("edit-target-price").value.trim();
+
+      const payload = {
+        title: document.getElementById("edit-title").value.trim(),
+        origin: document.getElementById("edit-origin").value.trim().toUpperCase(),
+        destination: document.getElementById("edit-dest").value.trim().toUpperCase(),
+        depart_date_start: depart,
+        depart_date_end: depart,
+        return_date_start: ret,
+        return_date_end: ret,
+        adults: Number(document.getElementById("edit-adults").value || 1),
+        max_stops: Number(document.getElementById("edit-stops").value || 0),
+        target_price: targetRaw ? Number(targetRaw) : null,
+        percentile_threshold: Number(document.getElementById("edit-percentile").value || 20),
+        extra_params: collectKvParams("edit-kv-list"),
+      };
+
+      const { error } = await sb.from("flight_plans").update(payload).eq("id", id);
+      if (error) return showToast("수정 실패: " + error.message);
+
+      closeEditModal();
+      showToast("변경사항이 저장되었습니다.");
+      await loadPlans();
+    }
+
+    async function deletePlan(id) {
+      if (!confirm("이 여행 계획과 누적 가격 이력을 삭제하시겠습니까?")) return;
+      const { error } = await sb.from("flight_plans").delete().eq("id", id);
+      if (error) return showToast("삭제 실패: " + error.message);
+      showToast("삭제되었습니다.");
+      await loadPlans();
+    }
+
+    async function triggerWorkflow(planId) {
+      if (!currentSession?.access_token) return showToast("로그인 세션이 만료되었습니다.");
+      showToast("GitHub Actions 실행 요청 중...");
+
+      const res = await fetch("/api/trigger", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${currentSession.access_token}`,
+        },
+        body: JSON.stringify({ plan_id: planId, force_notify: "true" }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        return showToast("실행 실패: " + (data.error || "알 수 없는 오류"), 5000);
+      }
+
+      showToast("실행 시작! 약 25초 후 디스코드로 리포트가 도착합니다.", 5000);
+      // 28초 뒤 대시보드 최저가 및 API 사용량 자동 갱신
+      setTimeout(loadAllData, 28000);
+    }
+
+    initAuth();
+  </script>
+</body>
+</html>

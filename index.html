@@ -1180,7 +1180,9 @@
 
     function renderHistoryRows(plan) {
       const listEl = document.getElementById("history-list");
+      const normalizeCond = (s) => String(s || "").replace(/\s+/g, "");
       const currentCond = buildPlanConditionSummary(plan);
+      const currentCondNorm = normalizeCond(currentCond);
 
       if (!currentHistoryRows.length) {
         listEl.innerHTML = `<div style="padding:32px; text-align:center; color:var(--muted);">저장된 가격 이력이 없습니다.</div>`;
@@ -1193,7 +1195,7 @@
           year: "2-digit", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit"
         });
         const savedCond = row.raw_summary?.condition_summary || "조건 태그 없음 (구버전 기록)";
-        const isMismatch = savedCond !== currentCond;
+        const isMismatch = normalizeCond(savedCond) !== currentCondNorm;
 
         return `
           <div class="history-row ${isMismatch ? "mismatch" : ""}">

@@ -144,7 +144,7 @@
       border: 1px solid #1c1c1c;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 5px;
       font-size: 12px;
     }
     .plan-meta {
@@ -230,11 +230,11 @@
     }
     .leg-grid {
       display: grid;
-      grid-template-columns: 1.2fr 1.2fr 1fr 1.1fr;
+      grid-template-columns: 1.15fr 1.15fr 0.95fr 1.25fr;
       gap: 10px;
       align-items: start;
     }
-    @media (max-width: 720px) {
+    @media (max-width: 760px) {
       .leg-grid { grid-template-columns: 1fr; }
     }
     .time-range-box {
@@ -265,7 +265,7 @@
     }
     .modal-backdrop.open { display: flex; }
     .modal {
-      background: #0a0a0a; border: 1px solid #555; width: 100%; max-width: 760px;
+      background: #0a0a0a; border: 1px solid #555; width: 100%; max-width: 800px;
       max-height: 90vh; overflow-y: auto; padding: 22px;
     }
 
@@ -300,6 +300,7 @@
     <header>
       <h1>FLIGHT CHRONICLE // CONTROL</h1>
       <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn" onclick="resetApiKey()" title="Supabase Publishable Key 재입력">키 설정</button>
         <button class="btn" onclick="loadAllData()">새로고침</button>
         <button class="btn btn-danger" onclick="signOut()">로그아웃</button>
       </div>
@@ -393,7 +394,7 @@
             <div class="airport-hint" id="new-dest-hint"></div>
           </div>
           <div class="field">
-            <label>가는 날 *</label>
+            <label>가는 날 및 이륙 시간대 *</label>
             <input type="date" id="new-depart" />
             <div class="time-range-box" style="margin-top:4px;">
               <select id="new-dep-hr-start"></select>
@@ -402,7 +403,7 @@
             </div>
           </div>
           <div class="field" id="new-return-wrap">
-            <label>오는 날 (왕복 필수)</label>
+            <label>오는 날 및 이륙 시간대 (왕복 필수)</label>
             <input type="date" id="new-return" />
             <div class="time-range-box" style="margin-top:4px;">
               <select id="new-ret-hr-start"></select>
@@ -414,9 +415,18 @@
 
         <!-- 다구간(MULTI) 입력 -->
         <div id="new-multi-wrap" style="display:none; margin-bottom:16px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <label style="font-size:11px; color:var(--muted);">다구간 여정 (각 구간별 공항 및 이륙 희망 시간대 설정 · 예: 08시 ~ 09시 = 08:00~09:59 출발)</label>
+          <div class="form-grid" style="margin-bottom:10px;">
+            <div class="field">
+              <label>다구간 항공사 조합 방식 (기본: 모든 항공사 자유 조합)</label>
+              <select id="new-multi-mode">
+                <option value="SPLIT" selected>모든 항공사 자유 조합 (구간별 최저가 합산 · 추천)</option>
+                <option value="SINGLE">단일 항공권 묶음 발권 (동일 항공사/동맹체 한정)</option>
+              </select>
+            </div>
           </div>
+          <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:8px;">
+            다구간 여정 (날짜는 기준 출발일을 선택하고, 밤~새벽편은 이륙 시간대에서 ‘익일 00시 ~ 익일 06시’까지 선택 가능)
+          </label>
           <div id="new-multi-legs"></div>
           <button type="button" class="btn" onclick="addMultiLegRow('new-multi-legs')">+ 구간 추가</button>
         </div>
@@ -435,12 +445,12 @@
         <!-- 동적 커스텀 변수 (extra_params) -->
         <div class="kv-section">
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <label style="font-size:12px; font-weight:700;">추가 SerpApi 변수 (extra_params)</label>
+            <label style="font-size:12px; font-weight:700;">추가 SerpApi 변수 (extra_params · 미설정 시 모든 항공사 검색)</label>
             <button type="button" class="btn" onclick="addKvRow('new-kv-list')">+ 변수 추가</button>
           </div>
           <div class="preset-chips">
-            <span class="chip" onclick="addKvRow('new-kv-list', 'include_airlines', 'KE,OZ')">+ include_airlines (항공사 포함)</span>
-            <span class="chip" onclick="addKvRow('new-kv-list', 'exclude_airlines', '')">+ exclude_airlines (항공사 제외)</span>
+            <span class="chip" onclick="addKvRow('new-kv-list', 'include_airlines', 'KE,OZ')">+ include_airlines (특정 항공사만)</span>
+            <span class="chip" onclick="addKvRow('new-kv-list', 'exclude_airlines', '')">+ exclude_airlines (특정 항공사 제외)</span>
             <span class="chip" onclick="addKvRow('new-kv-list', 'bags', '1')">+ bags (기내수하물)</span>
             <span class="chip" onclick="addKvRow('new-kv-list', 'max_duration', '900')">+ max_duration (최대비행분)</span>
             <span class="chip" onclick="addKvRow('new-kv-list', 'travel_class', '1')">+ travel_class (좌석등급 1~4)</span>
@@ -512,7 +522,7 @@
           <div class="airport-hint" id="edit-dest-hint"></div>
         </div>
         <div class="field">
-          <label>가는 날</label>
+          <label>가는 날 및 이륙 시간대</label>
           <input type="date" id="edit-depart" />
           <div class="time-range-box" style="margin-top:4px;">
             <select id="edit-dep-hr-start"></select>
@@ -521,7 +531,7 @@
           </div>
         </div>
         <div class="field" id="edit-return-wrap">
-          <label>오는 날</label>
+          <label>오는 날 및 이륙 시간대</label>
           <input type="date" id="edit-return" />
           <div class="time-range-box" style="margin-top:4px;">
             <select id="edit-ret-hr-start"></select>
@@ -533,7 +543,16 @@
 
       <!-- 수정 모달: 다구간용 -->
       <div id="edit-multi-wrap" style="display:none; margin-bottom:16px;">
-        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:8px;">다구간 여정 및 구간별 이륙 시간대 수정</label>
+        <div class="form-grid" style="margin-bottom:10px;">
+          <div class="field">
+            <label>다구간 항공사 조합 방식</label>
+            <select id="edit-multi-mode">
+              <option value="SPLIT">모든 항공사 자유 조합 (구간별 최저가 합산 · 추천)</option>
+              <option value="SINGLE">단일 항공권 묶음 발권 (동일 항공사/동맹체 한정)</option>
+            </select>
+          </div>
+        </div>
+        <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:8px;">다구간 여정 및 구간별 이륙 시간대 수정 (익일 06시까지 설정 가능)</label>
         <div id="edit-multi-legs"></div>
         <button type="button" class="btn" onclick="addMultiLegRow('edit-multi-legs')">+ 구간 추가</button>
       </div>
@@ -560,7 +579,6 @@
     // 1. SUPABASE 설정
     // =========================================================
     const SUPABASE_URL = "https://riapxjwtalqvaevsnpnb.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_A3BcYO4bYJZG8bKmFivEaw_vTQqY..."; // 아래 init에서 실제 키 교체 확인
 
     // =========================================================
     // 2. 전 세계 주요 공항 데이터베이스 (한글/영문/IATA 자동완성)
@@ -772,25 +790,28 @@
       if (inputEl.value) updateHint(inputEl.value);
     }
 
+    // 00시 ~ 23시 + 익일 00시 ~ 익일 06시(24~30) 드롭다운 생성기
+    function formatHourLabel(h) {
+      const n = Number(h);
+      if (n >= 24) {
+        return `익일 ${String(n - 24).padStart(2, "0")}시`;
+      }
+      return `${String(n).padStart(2, "0")}시`;
+    }
+
     function buildHourOptionsHtml(selectedVal = "", placeholder = "전체 시간") {
       let html = `<option value="">${placeholder}</option>`;
-      for (let h = 0; h <= 23; h++) {
-        const label = `${String(h).padStart(2, "0")}시`;
-        const sel = (selectedVal !== "" && selectedVal !== null && Number(selectedVal) === h) ? "selected" : "";
+      for (let h = 0; h <= 30; h++) {
+        const label = formatHourLabel(h);
+        const sel = (selectedVal !== "" && selectedVal !== null && selectedVal !== undefined && Number(selectedVal) === h) ? "selected" : "";
         html += `<option value="${h}" ${sel}>${label}</option>`;
       }
       return html;
     }
 
     // =========================================================
-    // 3. SUPABASE 초기화 (Publishable Key를 아래에 정확히 입력하세요)
+    // 3. SUPABASE 초기화
     // =========================================================
-    const REAL_PUBLISHABLE_KEY = promptForKeyIfNeeded();
-    function promptForKeyIfNeeded() {
-      const saved = localStorage.getItem("fc_sb_pub_key");
-      return saved || "";
-    }
-
     let sb = null;
     let currentSession = null;
     let cachedPlans = [];
@@ -803,6 +824,15 @@
         if (key) localStorage.setItem("fc_sb_pub_key", key);
       }
       sb = window.supabase.createClient(SUPABASE_URL, key);
+    }
+
+    function resetApiKey() {
+      const current = localStorage.getItem("fc_sb_pub_key") || "";
+      const next = window.prompt("새 Supabase Publishable Key (sb_publishable_...)를 입력하세요:", current);
+      if (next && next.trim()) {
+        localStorage.setItem("fc_sb_pub_key", next.trim());
+        location.reload();
+      }
     }
 
     function showToast(msg, duration = 3500) {
@@ -877,10 +907,7 @@
         .eq("month_key", monthKey)
         .maybeSingle();
 
-      if (error) {
-        console.error(error);
-        return;
-      }
+      if (error) return console.error(error);
       const used = data?.call_count ?? 0;
       const limit = data?.monthly_limit ?? 250;
       const pct = Math.min(100, Math.round((used / limit) * 100));
@@ -897,10 +924,7 @@
         .eq("id", 1)
         .maybeSingle();
 
-      if (error) {
-        console.error(error);
-        return;
-      }
+      if (error) return console.error(error);
       const enabled = Boolean(data?.auto_refresh_enabled);
       document.getElementById("global-auto-toggle").checked = enabled;
       document.getElementById("auto-status-text").textContent = enabled ? "ON (자동 실행 활성)" : "OFF (자동 실행 중지)";
@@ -939,9 +963,15 @@
       if ((s === "" || s === undefined || s === null) && (e === "" || e === undefined || e === null)) {
         return "이륙시간 무관";
       }
-      const sh = String(s !== "" && s !== null && s !== undefined ? s : 0).padStart(2, "0");
-      const eh = String(e !== "" && e !== null && e !== undefined ? e : 23).padStart(2, "0");
-      return `${sh}:00 ~ ${eh}:59 이륙`;
+      const startNum = (s !== "" && s !== null && s !== undefined) ? Number(s) : 0;
+      const endNum = (e !== "" && e !== null && e !== undefined) ? Number(e) : 23;
+      const startStr = startNum >= 24
+        ? `익일 ${String(startNum - 24).padStart(2, "0")}:00`
+        : `${String(startNum).padStart(2, "0")}:00`;
+      const endStr = endNum >= 24
+        ? `익일 ${String(endNum - 24).padStart(2, "0")}:59`
+        : `${String(endNum).padStart(2, "0")}:59`;
+      return `${startStr} ~ ${endStr} 이륙`;
     }
 
     function renderPlans() {
@@ -954,10 +984,12 @@
       container.innerHTML = cachedPlans.map(p => {
         const extra = p.extra_params || {};
         const multiLegs = Array.isArray(extra.multi_city_legs) ? extra.multi_city_legs : [];
-        const extraEntries = Object.entries(extra).filter(([k]) => k !== "multi_city_legs");
+        const multiMode = (extra.multi_mode || "SPLIT").toUpperCase();
+        const hiddenKeys = new Set(["multi_city_legs", "multi_mode", "dep_hour_start", "dep_hour_end", "ret_hour_start", "ret_hour_end"]);
+        const extraEntries = Object.entries(extra).filter(([k]) => !hiddenKeys.has(k));
 
         const routeText = p.trip_type === "MULTI"
-          ? `다구간 (${multiLegs.length}구간)`
+          ? `다구간 (${multiLegs.length}구간 · ${multiMode === "SPLIT" ? "모든 항공사 자유 조합" : "단일 묶음 발권"})`
           : `${escapeHtml(p.origin)} → ${escapeHtml(p.destination)}`;
 
         const dateText = p.trip_type === "ROUND" && p.return_date_start
@@ -1084,11 +1116,11 @@
             <div class="airport-hint leg-arr-hint"></div>
           </div>
           <div class="field">
-            <label>출발 날짜</label>
+            <label>기준 출발 날짜</label>
             <input type="date" class="leg-date" value="${escapeHtml(date)}" />
           </div>
           <div class="field">
-            <label>이륙 희망 시간대 (시)</label>
+            <label>이륙 희망 시간대 (익일 06시까지)</label>
             <div class="time-range-box">
               <select class="leg-hr-start">${buildHourOptionsHtml(depHrStart, "시작")}</select>
               <span style="color:#666;">~</span>
@@ -1168,6 +1200,7 @@
         origin = legs[0].departure_id;
         destination = legs[legs.length - 1].arrival_id;
         departStart = legs[0].date;
+        extraParams.multi_mode = document.getElementById("new-multi-mode").value || "SPLIT";
         extraParams.multi_city_legs = legs;
       } else {
         origin = document.getElementById("new-origin").value.trim().toUpperCase();
@@ -1184,14 +1217,13 @@
 
         const depS = document.getElementById("new-dep-hr-start").value;
         const depE = document.getElementById("new-dep-hr-end").value;
-        if (depS !== "" || depE !== "") {
-          extraParams.outbound_times = `${depS !== "" ? depS : 0},${depE !== "" ? depE : 23}`;
-        }
+        if (depS !== "") extraParams.dep_hour_start = Number(depS);
+        if (depE !== "") extraParams.dep_hour_end = Number(depE);
+
         const retS = document.getElementById("new-ret-hr-start").value;
         const retE = document.getElementById("new-ret-hr-end").value;
-        if (tripType === "ROUND" && (retS !== "" || retE !== "")) {
-          extraParams.return_times = `${retS !== "" ? retS : 0},${retE !== "" ? retE : 23}`;
-        }
+        if (tripType === "ROUND" && retS !== "") extraParams.ret_hour_start = Number(retS);
+        if (tripType === "ROUND" && retE !== "") extraParams.ret_hour_end = Number(retE);
       }
 
       const payload = {
@@ -1252,6 +1284,7 @@
       if (isMulti) {
         stdWrap.style.display = "none";
         multiWrap.style.display = "block";
+        document.getElementById("edit-multi-mode").value = (extra.multi_mode || "SPLIT").toUpperCase();
         const legsContainer = document.getElementById("edit-multi-legs");
         legsContainer.innerHTML = "";
         (extra.multi_city_legs || []).forEach(l => {
@@ -1273,18 +1306,19 @@
         document.getElementById("edit-return").value = p.return_date_start || "";
         document.getElementById("edit-return-wrap").style.display = p.trip_type === "ROUND" ? "flex" : "none";
 
-        const [ds, de] = String(extra.outbound_times || "").split(",");
-        const [rs, re] = String(extra.return_times || "").split(",");
-        document.getElementById("edit-dep-hr-start").innerHTML = buildHourOptionsHtml(ds ?? "", "시작");
-        document.getElementById("edit-dep-hr-end").innerHTML = buildHourOptionsHtml(de ?? "", "종료");
-        document.getElementById("edit-ret-hr-start").innerHTML = buildHourOptionsHtml(rs ?? "", "시작");
-        document.getElementById("edit-ret-hr-end").innerHTML = buildHourOptionsHtml(re ?? "", "종료");
+        const [outS, outE] = String(extra.outbound_times || "").split(",");
+        const [retS, retE] = String(extra.return_times || "").split(",");
+        document.getElementById("edit-dep-hr-start").innerHTML = buildHourOptionsHtml(extra.dep_hour_start ?? outS ?? "", "시작");
+        document.getElementById("edit-dep-hr-end").innerHTML = buildHourOptionsHtml(extra.dep_hour_end ?? outE ?? "", "종료");
+        document.getElementById("edit-ret-hr-start").innerHTML = buildHourOptionsHtml(extra.ret_hour_start ?? retS ?? "", "시작");
+        document.getElementById("edit-ret-hr-end").innerHTML = buildHourOptionsHtml(extra.ret_hour_end ?? retE ?? "", "종료");
       }
 
       const kvList = document.getElementById("edit-kv-list");
       kvList.innerHTML = "";
+      const skipKeys = new Set(["multi_city_legs", "multi_mode", "dep_hour_start", "dep_hour_end", "ret_hour_start", "ret_hour_end", "outbound_times", "return_times"]);
       Object.entries(extra).forEach(([k, v]) => {
-        if (["multi_city_legs", "outbound_times", "return_times"].includes(k)) return;
+        if (skipKeys.has(k)) return;
         const valStr = typeof v === "object" ? JSON.stringify(v) : String(v);
         addKvRow("edit-kv-list", k, valStr);
       });
@@ -1313,6 +1347,7 @@
         origin = legs[0].departure_id;
         destination = legs[legs.length - 1].arrival_id;
         departStart = legs[0].date;
+        extraParams.multi_mode = document.getElementById("edit-multi-mode").value || "SPLIT";
         extraParams.multi_city_legs = legs;
       } else {
         origin = document.getElementById("edit-origin").value.trim().toUpperCase();
@@ -1322,14 +1357,13 @@
 
         const depS = document.getElementById("edit-dep-hr-start").value;
         const depE = document.getElementById("edit-dep-hr-end").value;
-        if (depS !== "" || depE !== "") {
-          extraParams.outbound_times = `${depS !== "" ? depS : 0},${depE !== "" ? depE : 23}`;
-        }
+        if (depS !== "") extraParams.dep_hour_start = Number(depS);
+        if (depE !== "") extraParams.dep_hour_end = Number(depE);
+
         const retS = document.getElementById("edit-ret-hr-start").value;
         const retE = document.getElementById("edit-ret-hr-end").value;
-        if (tripType === "ROUND" && (retS !== "" || retE !== "")) {
-          extraParams.return_times = `${retS !== "" ? retS : 0},${retE !== "" ? retE : 23}`;
-        }
+        if (tripType === "ROUND" && retS !== "") extraParams.ret_hour_start = Number(retS);
+        if (tripType === "ROUND" && retE !== "") extraParams.ret_hour_end = Number(retE);
       }
 
       const payload = {
